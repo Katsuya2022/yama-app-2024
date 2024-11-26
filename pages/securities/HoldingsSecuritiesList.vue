@@ -52,7 +52,7 @@
           :items-per-page="10"
           :headers="headers"
           :items="datas"
-          height="50vh"
+          height="55vh"
           fixed-header
           density="compact"
           items-per-page-text="表示行数"
@@ -63,18 +63,36 @@
 </template>
 
 <script setup>
-import Papa from "papaparse"
-import { ref } from "vue"
-const showCsvData = () => {
+import Encoding from "encoding-japanese";
+import Papa from "papaparse";
+import { ref } from "vue";
+
+// アップロードしたcsvファイルをUNICODEに変換してテーブルに表示する
+const showCsvData = async function() {
   const csvFile = uploadFile.value;
+  const reader = new FileReader();
+  const unicodeString = await new Promise((resolve, reject) => {
+    reader.onload = function(e) {
+      const codes = new Uint8Array(e.target.result);
+      const encoding = Encoding.detect(codes);
+      let result = Encoding.convert(codes, {
+        to: 'UNICODE',
+        from: encoding,
+        type: 'string',
+      });
+      resolve(result);
+    };
+    // CSVファイルの読み込み実行
+    reader.readAsArrayBuffer(csvFile);
+  })
+
   headers.value = headers2;
   datas.value = [];
-  Papa.parse(csvFile, {
+  Papa.parse(unicodeString, {
     complete: (results) => {
       let stockDataRow = false;
       results.data.forEach((row, i) => {
         let data = {};
-        // if (7 < i && i <= 38) {
         // 個別株データ行直前の行の場合、次の行からが個別株データ行であることを示すフラグを立てる
         if (!stockDataRow && row[0] == "銘柄（コード）") {
           stockDataRow = true;

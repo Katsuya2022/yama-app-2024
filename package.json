@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
+    "encoding-japanese": "^2.2.0",
     "nuxt": "^3.14.159",
     "papaparse": "^5.4.1",
     "vue": "latest",

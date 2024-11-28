@@ -101,7 +101,7 @@ const showCsvData = async function() {
         } else if (!stockDataRow) {
           return;
         // 個別株データ行の次の行の場合、次の行からが個別株データ行であることを示すフラグをfalseにする
-        } else if (stockDataRow && row[0] == "株式(現物/NISA預り(成長投資枠))合計") {
+        } else if (stockDataRow && row[0] == "") {
           stockDataRow = false;
         // 個別株データ行の場合、テーブル表示用にデータを追加する
         } else if (stockDataRow) {

@@ -37,7 +37,7 @@
             <v-select
               label="yyyy/mm/dd"
               density="compact"
-              :items="['2024/11/20', '2024/10/01', '2024/07/31', '2024/05/22']"
+              :items="downloadDatas"
               variant="outlined"
               hide-details="auto"
             ></v-select>
@@ -65,7 +65,25 @@
 <script setup>
 import Encoding from "encoding-japanese";
 import Papa from "papaparse";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { collection, getDocs } from "firebase/firestore";
+const COLLECTION_NAME = "securitiesHoldings";
+const SUB_COLLECTION_NAME = "securities";
+const { $db } = useNuxtApp();
+
+const downloadDatas = ref([]);
+onMounted( async () => {
+  try {
+    // 画面表示時に登録データの日付を取得する
+    const colRef = collection($db, COLLECTION_NAME);
+    const docs = await getDocs(colRef);
+    docs.forEach((doc) => {
+      downloadDatas.value.push(doc.id)
+    });
+  } catch(error) {
+    console.error(error);
+  }
+})
 
 // アップロードしたcsvファイルをUNICODEに変換してテーブルに表示する
 const showCsvData = async function() {

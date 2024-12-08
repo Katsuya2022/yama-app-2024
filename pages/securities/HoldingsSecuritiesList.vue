@@ -3,13 +3,13 @@
     <h1>保有証券一覧</h1>
       <v-sheet class="pa-2" :elevation="2" rounded>
         <v-row v-if="dataType==1" align="center">
-          <v-col cols="2">
+          <v-col cols="12" md="3">
             <v-radio-group v-model="dataType" hide-details="auto" inline>
               <v-radio label="CSVファイル" value="1"></v-radio>
               <v-radio label="過去データ" value="2"></v-radio>
             </v-radio-group>
           </v-col>
-          <v-col cols="3">
+          <v-col cols="12" md="3">
             <v-file-input
               v-model="uploadFile"
               label="ファイルアップロード"
@@ -19,21 +19,21 @@
                hide-details="auto"
             ></v-file-input>
           </v-col>
-          <v-col cols="2">
+          <v-col cols="12" md="3">
             <v-btn color="primary" block :disabled="!uploadFile" @click="showCsvData">表示する</v-btn>
           </v-col>
-          <v-col>
+          <v-col cols="12" md="3">
             <v-checkbox v-model="selected" value="1" label="今回のデータを保存する"  hide-details="auto" density="compact"/>
           </v-col>
         </v-row>
         <v-row v-if="dataType==2" align="center">
-          <v-col cols="2">
+          <v-col cols="12" md="3">
             <v-radio-group v-model="dataType"  hide-details="auto" inline>
               <v-radio label="CSVファイル" value="1"></v-radio>
               <v-radio label="過去データ" value="2"></v-radio>
             </v-radio-group>
           </v-col>
-          <v-col cols="3">
+          <v-col cols="12" md="3">
             <v-select
               label="yyyy/mm/dd"
               density="compact"
@@ -42,7 +42,7 @@
               hide-details="auto"
             ></v-select>
           </v-col>
-          <v-col cols="2">
+          <v-col cols="12" md="3">
             <v-btn color="primary" block>表示する</v-btn>
           </v-col>
         </v-row>

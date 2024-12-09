@@ -57,6 +57,18 @@
           density="compact"
           items-per-page-text="表示行数"
         >
+        <template v-slot:item="{ item }">
+          <tr>
+            <td>{{item.stockCode}}</td>
+            <td>{{item.stockName}}</td>
+            <td>{{item.quantity}}</td>
+            <td>{{item.acquisitionPrice}}</td>
+            <td>{{item.currentPrice}}</td>
+            <td>{{item.acquisitionAmount}}</td>
+            <td>{{item.valuation}}</td>
+            <td :class="getTextColor(item.profitLoss)">{{ item.profitLoss }}</td>
+          </tr>
+      </template>
         </v-data-table>
       </v-sheet>
   </v-container>
@@ -140,6 +152,13 @@ const showCsvData = async function() {
     }
   })
 }
+
+const getTextColor = function(val) {
+  if (val.includes('+')) return 'text-green';
+  if (val.includes('-')) return 'text-red';
+  return 'text-default';
+}
+
 let headers = ref([]);
 let datas = ref([]);
 let dataType = ref("1");

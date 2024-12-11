@@ -172,8 +172,8 @@ const showCsvData = async function() {
         // 個別株データ行の場合、テーブル表示用にデータを追加する
         } else if (stockDataRow) {
           data = {
-            userId: "u0001",
-            csvDate: csvDate.value.replaceAll("-", ""),
+            // userId: "u0001",
+            // csvDate: csvDate.value.replaceAll("-", ""),
             stockCode: row[0],               // 銘柄コード
             stockName: row[1],               // 銘柄名称
             quantity: row[2],                // 保有株数
@@ -193,6 +193,9 @@ const showCsvData = async function() {
     // firestoreに登録する
     try {
       const batchPromises = datas.value.map(async (data) => {
+        // データ登録前にユーザーIDとcsv日付を付与する
+        data.userId = "u0001";
+        data.csvDate = csvDate.value.replaceAll("-", "");
         await addDoc(collection($db, COLLECTION_NAME), data);
       })
       // すべての非同期処理の終了を待つ

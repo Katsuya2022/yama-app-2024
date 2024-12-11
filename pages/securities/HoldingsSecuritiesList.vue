@@ -16,14 +16,27 @@
               density="compact"
               variant="outlined"
               accept=".csv"
-               hide-details="auto"
+              hide-details="auto"
             ></v-file-input>
           </v-col>
-          <v-col cols="12" md="3">
-            <v-btn color="primary" block :disabled="!uploadFile" @click="showCsvData">表示する</v-btn>
+          <v-col cols="12" md="2">
+            <!-- ファイルが選択されていない、または、保存チェックボックスがtrueでCSVデータ日付が未入力の場合はボタン非活性 -->
+            <v-btn color="primary" block :disabled="!uploadFile||(saveFlag&&!csvDate)" @click="showCsvData">表示する</v-btn>
           </v-col>
-          <v-col cols="12" md="3">
-            <v-checkbox v-model="selected" value="1" label="今回のデータを保存する"  hide-details="auto" density="compact"/>
+          <v-col cols="6" md="2">
+            <v-checkbox v-model="saveFlag" value="1" label="今回のデータを保存する"  hide-details="auto" density="compact"/>
+          </v-col>
+          <v-col cols="6" md="2">
+            <v-text-field
+              type="date"
+              label="CSVデータ日付"
+              density="compact"
+              variant="outlined"
+              hide-details="auto"
+              :disabled="!saveFlag"
+              v-model="csvDate"
+              clearable
+            />
           </v-col>
         </v-row>
         <v-row v-if="dataType==2" align="center">
@@ -37,13 +50,14 @@
             <v-select
               label="yyyy/mm/dd"
               density="compact"
-              :items="downloadDatas"
+              :items="pastDateList"
               variant="outlined"
               hide-details="auto"
+              v-model="selectedDate"
             ></v-select>
           </v-col>
           <v-col cols="12" md="3">
-            <v-btn color="primary" block>表示する</v-btn>
+            <v-btn color="primary" block @click="showPastData">表示する</v-btn>
           </v-col>
         </v-row>
       </v-sheet>
@@ -66,7 +80,7 @@
             <td>{{item.currentPrice}}</td>
             <td>{{item.acquisitionAmount}}</td>
             <td>{{item.valuation}}</td>
-            <td :class="getTextColor(item.profitLoss)">{{ item.profitLoss }}</td>
+            <td :class="setTextColor(item.profitLoss)">{{ item.profitLoss }}</td>
           </tr>
       </template>
         </v-data-table>
@@ -78,26 +92,48 @@
 import Encoding from "encoding-japanese";
 import Papa from "papaparse";
 import { ref, onMounted } from "vue";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 const COLLECTION_NAME = "securitiesHoldings";
 const SUB_COLLECTION_NAME = "securities";
 const { $db } = useNuxtApp();
 
-const downloadDatas = ref([]);
-onMounted( async () => {
+const pastDateList = ref([]);
+onMounted(() => {
+  getPastDateList();
+})
+
+const groupedData = ref({});  //日毎にグループ化した登録データ
+/**
+ * 全過去データを取得する\
+ * 取得したデータをcsv日付(csvDate)毎にグループ化する
+ */
+const getPastDateList = async function() {
   try {
     // 画面表示時に登録データの日付を取得する
     const colRef = collection($db, COLLECTION_NAME);
     const docs = await getDocs(colRef);
     docs.forEach((doc) => {
-      downloadDatas.value.push(doc.id)
+      const data = doc.data();
+      const csvDate = data["csvDate"];
+
+      // グループ化データに同じ日付がなければグループを作成
+      if (!groupedData.value[csvDate]) {
+        groupedData.value[csvDate] = [];
+      }
+      // グループ毎にデータを格納する
+      groupedData.value[csvDate].push(data);
     });
+    pastDateList.value = Object.keys(groupedData.value);
   } catch(error) {
     console.error(error);
   }
-})
+}
 
-// アップロードしたcsvファイルをUNICODEに変換してテーブルに表示する
+/** 
+ * アップロードしたcsvファイルの保有証券一覧をテーブルに表示する\
+ * csvデータをUNICODEに変換してからデータを処理する
+ */
+
 const showCsvData = async function() {
   const csvFile = uploadFile.value;
   const reader = new FileReader();
@@ -116,7 +152,7 @@ const showCsvData = async function() {
     reader.readAsArrayBuffer(csvFile);
   })
 
-  headers.value = headers2;
+  headers.value = headerColumns;
   datas.value = [];
   Papa.parse(unicodeString, {
     complete: (results) => {
@@ -136,6 +172,8 @@ const showCsvData = async function() {
         // 個別株データ行の場合、テーブル表示用にデータを追加する
         } else if (stockDataRow) {
           data = {
+            userId: "u0001",
+            csvDate: csvDate.value.replaceAll("-", ""),
             stockCode: row[0],               // 銘柄コード
             stockName: row[1],               // 銘柄名称
             quantity: row[2],                // 保有株数
@@ -151,9 +189,35 @@ const showCsvData = async function() {
       })
     }
   })
+  if (saveFlag.value && csvDate.value) {
+    // firestoreに登録する
+    try {
+      const batchPromises = datas.value.map(async (data) => {
+        await addDoc(collection($db, COLLECTION_NAME), data);
+      })
+      // すべての非同期処理の終了を待つ
+      await Promise.all(batchPromises);
+    } catch(error) {
+      console.error("Firestoreへの登録中にエラーが発生しました:", error);
+    }
+  }
 }
 
-const getTextColor = function(val) {
+/**
+ * 選択した過去日の保有証券一覧をテーブルに表示する
+ */
+const showPastData = function() {
+  headers.value = headerColumns;
+  datas.value = groupedData.value[selectedDate.value];
+}
+
+/**
+ * 損益のあるデータに色付けのためのクラスを付与する\
+ * プラスの場合：緑色\
+ * マイナスの場合：赤色\
+ * を設定する
+ */
+const setTextColor = function(val) {
   if (val.includes('+')) return 'text-green';
   if (val.includes('-')) return 'text-red';
   return 'text-default';
@@ -162,9 +226,11 @@ const getTextColor = function(val) {
 let headers = ref([]);
 let datas = ref([]);
 let dataType = ref("1");
-let selected = ref(false);
+let saveFlag = ref(false);
 let uploadFile = ref(null);
-const headers2 = [
+let csvDate = ref()
+let selectedDate = ref()
+const headerColumns = [
   { title: '銘柄コード',     align: 'start', key: 'stockCode' },
   { title: '銘柄名称',       align: 'start', key: 'stockName' },
   { title: '保有株数',       align: 'start', key: 'quantity' },
